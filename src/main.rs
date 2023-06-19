@@ -297,7 +297,11 @@ impl Commands {
     }
 
     fn add_command(&mut self, text: String) {
-        let splits = text.split(" ").into_iter().map(|s| s.to_string()).collect();
+        let splits = text
+            .split_whitespace()
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect();
         self.commands.push(CommandDesc::new(splits));
     }
 
