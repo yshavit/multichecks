@@ -3,7 +3,7 @@ use regex::Regex;
 use std::fmt::Write;
 use std::fmt::{Error, Formatter};
 use std::io::Read;
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitCode, Stdio};
 use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
@@ -15,7 +15,7 @@ lazy_static! {
         Regex::new("\x1b\\[(\\d+)m").expect("Couldn't compile pattern for ASCII color sequences");
 }
 
-fn main() {
+fn main() -> ExitCode {
     let mut commands = Commands::new();
     for line in io::stdin().lines() {
         commands.add_command(line.unwrap());
@@ -30,6 +30,11 @@ fn main() {
         }
     }
     commands.print_details(&mut terminal);
+    return if commands.all_succeeded() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    };
 }
 
 struct Terminal {
@@ -145,6 +150,13 @@ impl CommandStatus {
         match self {
             CommandStatus::Unstarted | CommandStatus::Running | CommandStatus::Finished(0) => false,
             _ => true,
+        }
+    }
+
+    fn is_success(&self) -> bool {
+        match self {
+            CommandStatus::Finished(0) => true,
+            _ => false,
         }
     }
 }
@@ -307,6 +319,10 @@ impl Commands {
 
     fn all_done(&self) -> bool {
         self.commands.iter().all(|c| c.status.is_terminal_state())
+    }
+
+    fn all_succeeded(&self) -> bool {
+        self.commands.iter().all(|c| c.status.is_success())
     }
 
     fn summarize_all(&mut self, out: &mut Terminal) {
